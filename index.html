@@ -226,6 +226,30 @@ X：<select id="regX"></select> Y：<select id="regY"></select>
 </main>
 
 <script>
+  let secretClickCount = 0;
+
+function secretMusicClick(){
+
+  secretClickCount++;
+
+  if(secretClickCount === 3){
+    alert("再點兩下，有驚喜 👀");
+  }
+
+  if(secretClickCount >= 5){
+
+    alert("NJZ 統計學院開課 🎧");
+
+    window.open(
+      "https://www.youtube.com/watch?v=Q3K0TOvTOno",
+      "_blank"
+    );
+
+    secretClickCount = 0;
+
+  }
+
+}
 let rows=[], headers=[], resultText="";
 const $=id=>document.getElementById(id);
 
