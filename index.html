@@ -163,6 +163,9 @@ gender,group,age,score,q1,q2,q3
 <button onclick="showPanel('spearman')">Spearman 相關</button>
 <button onclick="showPanel('ttest')">獨立樣本 t 檢定</button>
 <button onclick="showPanel('anova')">單因子 ANOVA</button>
+  <button onclick="showPanel('rm_anova')">
+重複量數 ANOVA
+</button>
 <button onclick="showPanel('twoway')">二因子 ANOVA</button>
 <button onclick="showPanel('ancova')">ANCOVA 共變數分析</button>
 <button onclick="showPanel('reg')">簡單迴歸</button>
@@ -190,9 +193,16 @@ X：<select id="spearmanX"></select> Y：<select id="spearmanY"></select>
 分組：<select id="anovaG"></select> 分數：<select id="anovaY"></select>
 <button onclick="runANOVA()">開始分析</button></div>
 
+<div id="rm_anova" class="panel"><h3>重複量數 ANOVA（單因子相依樣本）</h3>
+<p class="small">適用：同一批受試者在三個以上條件/時間/版本下重複測量。例如：版本一、版本二、版本三的喜好度。</p>
+<p class="small">請勾選要比較的重複測量欄位，不要勾受試者編號。</p>
+<div id="rmItems" class="checks"></div>
+<button onclick="runRMANOVA()">開始分析</button></div>
+
 <div id="twoway" class="panel"><h3>二因子 ANOVA</h3>
 因子A：<select id="twoA"></select> 因子B：<select id="twoB"></select> 依變項：<select id="twoY"></select>
 <button onclick="runTwoWay()">開始分析</button></div>
+  
 
 <div id="ancova" class="panel"><h3>ANCOVA 共變數分析</h3>
 <p class="small">用於：組別起點不同，但想控制共變項後比較依變項。例如：遊戲組別、先備知識、學習成果。</p>
@@ -321,6 +331,9 @@ function refreshControls(){
   ["spearmanX","spearmanY"].forEach(id=>$(id).innerHTML=optionHTML(all));
   $("alphaItems").innerHTML=nums.map(h=>`<label><input type="checkbox" value="${h}" checked> ${h}</label>`).join("");
   $("factorItems").innerHTML=nums.map(h=>`<label><input type="checkbox" value="${h}" checked> ${h}</label>`).join("");
+  if($("rmItems")){
+    $("rmItems").innerHTML=nums.map(h=>`<label><input type="checkbox" value="${h}"> ${h}</label>`).join("");
+  }
 }
 function showPanel(id){ document.querySelectorAll(".panel").forEach(p=>p.style.display="none"); $(id).style.display="block"; }
 function setOut(t){ resultText=t; $("output").textContent=t; }
@@ -593,8 +606,129 @@ function runTwoWay(){
   let pA=1-fCDF(FA,dfA,dfE), pB=1-fCDF(FB,dfB,dfE), pAB=1-fCDF(FAB,dfAB,dfE);
   setOut(`【二因子 ANOVA 簡化版】\n\n因子A：${A}\n因子B：${B}\n依變項：${Y}\nN=${n}\n\n來源\tF\tp\n${A} 主效果\t${fmt(FA)}\t${fmt(pA,4)}\n${B} 主效果\t${fmt(FB)}\t${fmt(pB,4)}\n${A}×${B} 交互作用\t${fmt(FAB)}\t${fmt(pAB,4)}\n\n解讀：先看交互作用。\n${pAB<.05?"交互作用顯著，優先解讀交互作用，不急著看主效果。":"交互作用不顯著，可以回頭看兩個主效果。"}`);
 }
+
+function pairedT(a,b){
+  const d=a.map((v,i)=>v-b[i]);
+  const n=d.length;
+  const md=mean(d);
+  const sdd=sd(d);
+  const t=md/(sdd/Math.sqrt(n));
+  const p=2*(1-tCDF(Math.abs(t),n-1));
+  return {t,p,df:n-1,diff:md};
+}
+
+function covarianceMatrix(M){
+  const n=M.length, p=M[0].length;
+  const means=Array.from({length:p},(_,j)=>mean(M.map(r=>r[j])));
+  const S=Array.from({length:p},()=>Array(p).fill(0));
+  for(let i=0;i<p;i++){
+    for(let j=0;j<p;j++){
+      let s=0;
+      for(let r=0;r<n;r++) s+=(M[r][i]-means[i])*(M[r][j]-means[j]);
+      S[i][j]=s/(n-1);
+    }
+  }
+  return S;
+}
+
+function mauchlyTest(M){
+  const n=M.length, k=M[0].length;
+  if(k<3) return null;
+  // difference matrix: each later condition minus first condition
+  const D=M.map(row=>row.slice(1).map(v=>v-row[0]));
+  const S=covarianceMatrix(D);
+  const m=k-1;
+  const det=detMatrix(S);
+  const tr=S.reduce((s,row,i)=>s+row[i],0);
+  if(det<=0 || tr<=0) return null;
+  const W=det/Math.pow(tr/m,m);
+  const df=(k*(k-1)/2)-1;
+  // Practical approximation for teaching-use Mauchly test.
+  const c=(2*k*k+k+2)/(6*(k-1)*(n-1));
+  const chi=-(n-1)*(1-c)*Math.log(W);
+  const p=1-chiCDF(chi,df);
+  return {W,chi,df,p};
+}
+
+function runRMANOVA(){
+  const items=getChecked("rmItems");
+  if(items.length<3){
+    setOut("重複量數 ANOVA 至少要勾選三個重複測量欄位。");
+    return;
+  }
+
+  const M=matrixRows(items);
+  const n=M.length, k=items.length;
+  if(n<2){
+    setOut("有效樣本太少，無法分析。");
+    return;
+  }
+
+  const all=M.flat();
+  const grand=mean(all);
+  const condMeans=items.map((_,j)=>mean(M.map(r=>r[j])));
+  const subjMeans=M.map(r=>mean(r));
+
+  let ssTotal=0, ssCond=0, ssSubj=0, ssError=0;
+  M.forEach(r=>r.forEach(v=>ssTotal+=(v-grand)**2));
+  condMeans.forEach(m=>ssCond+=n*(m-grand)**2);
+  subjMeans.forEach(m=>ssSubj+=k*(m-grand)**2);
+  ssError=ssTotal-ssCond-ssSubj;
+
+  const dfCond=k-1;
+  const dfError=(k-1)*(n-1);
+  const msCond=ssCond/dfCond;
+  const msError=ssError/dfError;
+  const F=msCond/msError;
+  const p=1-fCDF(F,dfCond,dfError);
+  const eta=ssCond/(ssCond+ssError);
+
+  const mau=mauchlyTest(M);
+
+  let out=`【重複量數 ANOVA（單因子相依樣本）】\n\n`;
+  out+=`重複測量欄位：${items.join("、")}\n有效樣本 N=${n}\n測量次數/條件數=${k}\n\n`;
+
+  out+=`一、描述統計\n`;
+  items.forEach((it,j)=>{
+    const arr=M.map(r=>r[j]);
+    out+=`${it}：平均=${fmt(mean(arr))}, SD=${fmt(sd(arr))}\n`;
+  });
+
+  out+=`\n二、球形檢定（Mauchly's Test，教學近似版）\n`;
+  if(mau){
+    out+=`W=${fmt(mau.W)}, χ²(${mau.df})=${fmt(mau.chi)}, p=${fmt(mau.p,4)}\n`;
+    out+=`${mau.p>.05?"p > .05，符合球形假設。":"p < .05，不符合球形假設，正式報告建議看 Greenhouse-Geisser 校正。"}\n`;
+  }else{
+    out+=`無法計算球形檢定，可能是資料共線或變異數矩陣不可逆。\n`;
+  }
+
+  out+=`\n三、重複量數 ANOVA 結果\n`;
+  out+=`F(${dfCond}, ${dfError})=${fmt(F)}, p=${fmt(p,4)}, partial η²=${fmt(eta)}\n`;
+  out+=`${p<.05?"不同條件/版本之間達顯著差異。":"不同條件/版本之間未達顯著差異。"}\n`;
+
+  out+=`\n四、Bonferroni 事後比較（配對 t 檢定近似）\n`;
+  const comps=k*(k-1)/2;
+  for(let i=0;i<k;i++){
+    for(let j=i+1;j<k;j++){
+      const a=M.map(r=>r[i]), b=M.map(r=>r[j]);
+      const res=pairedT(a,b);
+      const pBon=Math.min(res.p*comps,1);
+      out+=`${items[i]} vs ${items[j]}：平均差=${fmt(res.diff)}, t(${res.df})=${fmt(res.t)}, p_adj=${fmt(pBon,4)} ${pBon<.05?"*":""}\n`;
+    }
+  }
+
+  out+=`\n五、可直接貼報告的文字\n`;
+  if(mau){
+    out+=`首先進行球形檢定，結果顯示${mau.p>.05?"符合":"不符合"}球形假設（W=${fmt(mau.W)}, p=${fmt(mau.p,4)}）。`;
+  }
+  out+=`重複量數 ANOVA 結果顯示，不同條件/版本之間的平均數${p<.05?"達顯著差異":"未達顯著差異"}（F(${dfCond}, ${dfError})=${fmt(F)}, p=${fmt(p,4)}）。`;
+
+  setOut(out);
+}
+
+
 function autoGuide(){
-  setOut(`【統計方法判斷指南】\n\n問關係：\n連續 × 連續 → Pearson相關\n次序/排名/等第 → Spearman相關\n\n問差異：\n兩組平均數 → 獨立樣本t檢定\n三組以上平均數 → 單因子ANOVA\n兩個因素 → 二因子ANOVA\n\n問預測：\nX能不能預測Y → 迴歸分析\n\n問問卷：\n分幾類 / 建構效度 → 因素分析\n穩不穩 / 內部一致性 → Cronbach α\n\n常考：\nKMO > .60\nBartlett p < .05\nCronbach α > .70\n交互作用顯著 → 不優先討論主效果`);
+  setOut(`【統計方法判斷指南】\n\n問關係：\n連續 × 連續 → Pearson相關\n次序/排名/等第 → Spearman相關\n\n問差異：\n兩組平均數 → 獨立樣本t檢定\n三組以上、不同人 → 單因子ANOVA\n同一批人三次以上 → 重複量數ANOVA\n兩個因素 → 二因子ANOVA\n\n問預測：\nX能不能預測Y → 迴歸分析\n\n問問卷：\n分幾類 / 建構效度 → 因素分析\n穩不穩 / 內部一致性 → Cronbach α\n\n常考：\nKMO > .60\nBartlett p < .05\nCronbach α > .70\n交互作用顯著 → 不優先討論主效果`);
 }
 function loadPasted(){ const t=$("pasteArea").value.trim(); if(!t){alert("請先貼資料");return;} parseCSV(t);}
 function loadExample(){ const csv=`gender,group,age,score,pretest,posttest,q1,q2,q3,q4,q5,q6
