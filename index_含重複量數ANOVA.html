@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>SPSS Lite Pro 免安裝統計工具</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;font-family:"Microsoft JhengHei",Arial,sans-serif;background:#f3f6fb;color:#1f2937}
+header{
+
+height:500px;
+
+display:flex;
+
+flex-direction:column;
+
+justify-content:center;
+
+align-items:center;
+
+background-image:
+linear-gradient(
+rgba(0,0,0,0.25),
+rgba(0,0,0,0.25)
+),
+url("GettyImages-1591361534.jpg");
+
+background-size:cover;
+
+background-position:center 25%;
+
+color:white;
+
+text-align:center;
+
+}header h1{margin:0 0 8px;font-size:30px}
+main{max-width:1200px;margin:20px auto;padding:0 14px}
+.card{background:white;border-radius:16px;padding:18px;margin-bottom:16px;box-shadow:0 8px 24px #0001}
+h2{margin-top:0;color:#182848}
+button{
+position:relative;
+
+overflow:hidden;
+
+border:0;
+
+border-radius:12px;
+
+background:#315b96;
+
+color:white;
+
+padding:10px 14px;
+
+font-weight:700;
+
+cursor:pointer;
+
+margin:4px;
+
+z-index:1;
+}
+button:hover{background:#182848}
+  button::before{
+
+content:"";
+
+position:absolute;
+
+top:0;
+left:0;
+
+width:100%;
+height:100%;
+
+background-image:url("GettyImages-1591361534.jpg");
+
+background-size:cover;
+
+background-position:center 38%;
+
+opacity:0.18;
+
+z-index:-1;
+
+}
+input,select,textarea{border:1px solid #cbd5e1;border-radius:10px;padding:9px;margin:4px}
+textarea{width:100%;min-height:140px;font-family:Consolas,monospace}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.wrap{overflow:auto;max-height:340px;border:1px solid #e5e7eb;border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border-bottom:1px solid #e5e7eb;padding:7px 9px;text-align:left;white-space:nowrap}
+th{background:#eef2ff;position:sticky;top:0}
+pre{background:#0f172a;color:#e2e8f0;padding:16px;border-radius:12px;line-height:1.55;white-space:pre-wrap;overflow:auto;min-height:260px}
+.badge{display:inline-block;background:#e0f2fe;color:#075985;border-radius:999px;padding:5px 10px;margin:3px;font-size:13px}
+.small{color:#64748b;font-size:14px}
+.panel{display:none;border-top:1px solid #e5e7eb;margin-top:12px;padding-top:12px}
+.checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:6px;max-height:260px;overflow:auto;border:1px solid #e5e7eb;border-radius:12px;padding:10px}
+.checks label{font-size:14px}
+hr{border:0;border-top:1px solid #e5e7eb;margin:14px 0}
+  .left-photo{
+
+position:fixed;
+
+left:0;
+
+bottom:0;
+
+height:100px;
+
+z-index:9999;
+
+}
+
+.right-photo{
+
+position:fixed;
+
+right:0;
+
+bottom:0;
+
+height:100px;
+
+z-index:9999;
+
+}
+</style>
+</head>
+<body>
+<header onclick="secretMusicClick()">
+<h1>SPSS Lite Pro 免安裝統計工具</h1>
+<p>直接打開 HTML 就能用。支援 CSV / Excel，提供描述統計、相關、t檢定、ANOVA、迴歸、Cronbach α、KMO、Bartlett、因素分析。</p>
+</header>
+
+<main>
+<section class="card">
+<h2>一、匯入資料</h2>
+<input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+<button onclick="loadExample()">載入範例資料</button>
+<button onclick="clearAll()">清空</button>
+<p class="small">建議：從 SPSS/JASP/Jamovi 把 SAV 另存成 CSV 或 Excel 後再丟進來。第一列請放變項名稱。</p>
+<textarea id="pasteArea" placeholder="也可以貼上 CSV，例如：
+gender,group,age,score,q1,q2,q3
+男,A,20,80,4,5,4
+女,B,21,75,3,4,3"></textarea>
+<button onclick="loadPasted()">讀取貼上資料</button>
+</section>
+
+<section class="card">
+<h2>二、資料狀態</h2>
+<div id="info">尚未載入資料</div>
+<div class="wrap"><table id="preview"></table></div>
+</section>
+
+<section class="card">
+<h2>三、選擇分析</h2>
+<div class="grid">
+<button onclick="showPanel('desc')">描述統計 / 平均數</button>
+<button onclick="showPanel('pearson')">Pearson 相關</button>
+<button onclick="showPanel('spearman')">Spearman 相關</button>
+<button onclick="showPanel('ttest')">獨立樣本 t 檢定</button>
+<button onclick="showPanel('anova')">單因子 ANOVA</button>
+  <button onclick="showPanel('rm_anova')">
+重複量數 ANOVA
+</button>
+<button onclick="showPanel('twoway')">二因子 ANOVA</button>
+<button onclick="showPanel('ancova')">ANCOVA 共變數分析</button>
+<button onclick="showPanel('reg')">簡單迴歸</button>
+<button onclick="showPanel('alpha')">Cronbach α 信度</button>
+<button onclick="showPanel('factor')">因素分析 / KMO / Bartlett</button>
+<button onclick="autoGuide()">我不知道要用哪個</button>
+</div>
+
+<div id="panels">
+<div id="desc" class="panel"><h3>描述統計</h3><button onclick="runDesc()">開始分析</button></div>
+
+<div id="pearson" class="panel"><h3>Pearson 相關</h3>
+X：<select id="pearsonX"></select> Y：<select id="pearsonY"></select>
+<button onclick="runPearson()">開始分析</button></div>
+
+<div id="spearman" class="panel"><h3>Spearman 等級相關</h3>
+X：<select id="spearmanX"></select> Y：<select id="spearmanY"></select>
+<button onclick="runSpearman()">開始分析</button></div>
+
+<div id="ttest" class="panel"><h3>獨立樣本 t 檢定</h3>
+分組：<select id="ttestG"></select> 分數：<select id="ttestY"></select>
+<button onclick="runTTest()">開始分析</button></div>
+
+<div id="anova" class="panel"><h3>單因子 ANOVA</h3>
+分組：<select id="anovaG"></select> 分數：<select id="anovaY"></select>
+<button onclick="runANOVA()">開始分析</button></div>
+
+<div id="rm_anova" class="panel"><h3>重複量數 ANOVA（單因子相依樣本）</h3>
+<p class="small">適用：同一批受試者在三個以上條件/時間/版本下重複測量。例如：版本一、版本二、版本三的喜好度。</p>
+<p class="small">請勾選要比較的重複測量欄位，不要勾受試者編號。</p>
+<div id="rmItems" class="checks"></div>
+<button onclick="runRMANOVA()">開始分析</button></div>
+
+<div id="twoway" class="panel"><h3>二因子 ANOVA</h3>
+因子A：<select id="twoA"></select> 因子B：<select id="twoB"></select> 依變項：<select id="twoY"></select>
+<button onclick="runTwoWay()">開始分析</button></div>
+  
+
+<div id="ancova" class="panel"><h3>ANCOVA 共變數分析</h3>
+<p class="small">用於：組別起點不同，但想控制共變項後比較依變項。例如：遊戲組別、先備知識、學習成果。</p>
+固定因子/組別：<select id="ancovaG"></select>
+共變項：<select id="ancovaCov"></select>
+依變項：<select id="ancovaY"></select>
+<button onclick="runANCOVA()">開始分析</button></div>
+
+<div id="reg" class="panel"><h3>簡單線性迴歸</h3>
+X：<select id="regX"></select> Y：<select id="regY"></select>
+<button onclick="runReg()">開始分析</button></div>
+
+<div id="alpha" class="panel"><h3>Cronbach α 信度</h3>
+<p class="small">請勾選問卷題目，不要勾年齡、總分、編號。</p>
+<div id="alphaItems" class="checks"></div>
+<button onclick="runAlpha()">開始分析</button></div>
+
+<div id="factor" class="panel"><h3>因素分析 / PCA</h3>
+<p class="small">請勾選問卷題目。會輸出 KMO、Bartlett、Eigenvalue、因素負荷量。</p>
+<div id="factorItems" class="checks"></div>
+<button onclick="runFactor()">開始分析</button></div>
+</div>
+</section>
+
+<section class="card">
+<h2>四、分析結果</h2>
+<button onclick="copyResult()">複製結果</button>
+<button onclick="downloadResult()">下載 TXT</button>
+<pre id="output">請先載入資料。</pre>
+</section>
+</main>
+
+<script>
+  let secretClickCount = 0;
+
+function secretMusicClick(){
+
+  secretClickCount++;
+
+  if(secretClickCount === 3){
+    alert("再點兩下，有驚喜 👀");
+  }
+
+  if(secretClickCount >= 5){
+
+    alert("NJZ 統計學院開課 🎧");
+
+    window.open(
+      "https://www.youtube.com/watch?v=Q3K0TOvTOno",
+      "_blank"
+    );
+
+    secretClickCount = 0;
+
+  }
+
+}
+let rows=[], headers=[], resultText="";
+const $=id=>document.getElementById(id);
+
+$("fileInput").addEventListener("change", async e=>{
+  const file=e.target.files[0]; if(!file) return;
+  const ext=file.name.split(".").pop().toLowerCase();
+  if(ext==="csv"){
+    const text=await file.text(); parseCSV(text);
+  }else if(["xlsx","xls"].includes(ext)){
+    if(typeof XLSX==="undefined"){ alert("Excel讀取套件未載入，請確認有網路，或改用CSV。"); return; }
+    const buf=await file.arrayBuffer();
+    const wb=XLSX.read(buf,{type:"array"});
+    const sheet=wb.Sheets[wb.SheetNames[0]];
+    const data=XLSX.utils.sheet_to_json(sheet,{defval:""});
+    setData(data);
+  }else alert("請使用 CSV 或 Excel。");
+});
+
+function parseCSV(text){
+  const lines=text.trim().split(/\r?\n/).filter(x=>x.trim()!="");
+  if(lines.length<2){alert("資料太少");return;}
+  const hs=splitCSVLine(lines[0]).map(x=>x.trim());
+  const data=lines.slice(1).map(line=>{
+    const vals=splitCSVLine(line);
+    const obj={}; hs.forEach((h,i)=>obj[h]=vals[i]??"");
+    return obj;
+  });
+  setData(data);
+}
+function splitCSVLine(line){
+  const out=[]; let cur="", q=false;
+  for(let i=0;i<line.length;i++){
+    const ch=line[i];
+    if(ch=='"'){ if(q && line[i+1]=='"'){cur+='"';i++;} else q=!q; }
+    else if(ch=="," && !q){ out.push(cur); cur=""; }
+    else cur+=ch;
+  }
+  out.push(cur); return out;
+}
+function setData(data){
+  rows=data.filter(r=>Object.values(r).some(v=>String(v).trim()!=""));
+  headers=rows.length?Object.keys(rows[0]):[];
+  renderPreview(); refreshControls(); setOut("資料已載入，請選擇分析。");
+}
+function renderPreview(){
+  $("info").innerHTML=`<span class="badge">資料筆數：${rows.length}</span><span class="badge">變項數：${headers.length}</span><span class="badge">數值變項：${numCols().length}</span><span class="badge">類別變項：${catCols().length}</span>`;
+  const t=$("preview"); t.innerHTML="";
+  if(!rows.length) return;
+  t.innerHTML="<thead><tr>"+headers.map(h=>`<th>${h}</th>`).join("")+"</tr></thead><tbody>"+
+    rows.slice(0,30).map(r=>"<tr>"+headers.map(h=>`<td>${r[h]??""}</td>`).join("")+"</tr>").join("")+"</tbody>";
+}
+function toNum(v){ if(v===null||v===undefined||String(v).trim()==="") return NaN; return Number(String(v).replace(/,/g,"")); }
+function values(col){ return rows.map(r=>toNum(r[col])).filter(v=>!Number.isNaN(v)); }
+function validPairs(x,y){ const a=[],b=[]; rows.forEach(r=>{let xv=toNum(r[x]), yv=toNum(r[y]); if(!isNaN(xv)&&!isNaN(yv)){a.push(xv);b.push(yv)}}); return [a,b];}
+function unique(col){ return [...new Set(rows.map(r=>String(r[col]).trim()).filter(v=>v!=""))];}
+function numCols(){ return headers.filter(h=>values(h).length>=2); }
+function catCols(){ return headers.filter(h=>{let u=unique(h).length; return u>=2 && u<=Math.min(30, Math.max(2, rows.length/2));});}
+function mean(a){return a.reduce((s,v)=>s+v,0)/a.length}
+function variance(a){let m=mean(a); return a.reduce((s,v)=>s+(v-m)**2,0)/(a.length-1)}
+function sd(a){return Math.sqrt(variance(a))}
+function pearsonRaw(a,b){let mx=mean(a),my=mean(b),num=0,dx=0,dy=0; for(let i=0;i<a.length;i++){num+=(a[i]-mx)*(b[i]-my);dx+=(a[i]-mx)**2;dy+=(b[i]-my)**2;} return num/Math.sqrt(dx*dy);}
+function ranks(arr){let pairs=arr.map((v,i)=>[v,i]).sort((a,b)=>a[0]>b[0]?1:a[0]<b[0]?-1:0), r=Array(arr.length); for(let i=0;i<pairs.length;){let j=i; while(j<pairs.length&&pairs[j][0]===pairs[i][0]) j++; let avg=(i+j+1)/2; for(let k=i;k<j;k++) r[pairs[k][1]]=avg; i=j;} return r;}
+function fmt(x,d=3){return Number.isFinite(x)?x.toFixed(d):"NA";}
+function optionHTML(cols){return cols.map(c=>`<option value="${c}">${c}</option>`).join("")}
+function refreshControls(){
+  const nums=numCols(), cats=catCols(), all=headers;
+  ["pearsonX","pearsonY","regX","regY","ttestY","anovaY","twoY","ancovaCov","ancovaY"].forEach(id=>$(id).innerHTML=optionHTML(nums));
+  ["ttestG","anovaG","twoA","twoB","ancovaG"].forEach(id=>$(id).innerHTML=optionHTML(cats));
+  ["spearmanX","spearmanY"].forEach(id=>$(id).innerHTML=optionHTML(all));
+  $("alphaItems").innerHTML=nums.map(h=>`<label><input type="checkbox" value="${h}" checked> ${h}</label>`).join("");
+  $("factorItems").innerHTML=nums.map(h=>`<label><input type="checkbox" value="${h}" checked> ${h}</label>`).join("");
+  if($("rmItems")){
+    $("rmItems").innerHTML=nums.map(h=>`<label><input type="checkbox" value="${h}"> ${h}</label>`).join("");
+  }
+}
+function showPanel(id){ document.querySelectorAll(".panel").forEach(p=>p.style.display="none"); $(id).style.display="block"; }
+function setOut(t){ resultText=t; $("output").textContent=t; }
+
+// distributions
+function logGamma(z){ const g=7, p=[0.99999999999980993,676.5203681218851,-1259.1392167224028,771.32342877765313,-176.61502916214059,12.507343278686905,-0.13857109526572012,9.9843695780195716e-6,1.5056327351493116e-7]; if(z<0.5) return Math.log(Math.PI)-Math.log(Math.sin(Math.PI*z))-logGamma(1-z); z-=1; let x=p[0]; for(let i=1;i<g+2;i++) x+=p[i]/(z+i); let t=z+g+0.5; return 0.5*Math.log(2*Math.PI)+(z+0.5)*Math.log(t)-t+Math.log(x);}
+function betacf(x,a,b){ const MAXIT=100, EPS=3e-7, FPMIN=1e-30; let qab=a+b,qap=a+1,qam=a-1,c=1,d=1-qab*x/qap;if(Math.abs(d)<FPMIN)d=FPMIN;d=1/d;let h=d; for(let m=1;m<=MAXIT;m++){let m2=2*m; let aa=m*(b-m)*x/((qam+m2)*(a+m2)); d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;d=1/d;h*=d*c; aa=-(a+m)*(qab+m)*x/((a+m2)*(qap+m2)); d=1+aa*d;if(Math.abs(d)<FPMIN)d=FPMIN;c=1+aa/c;if(Math.abs(c)<FPMIN)c=FPMIN;d=1/d;let del=d*c;h*=del;if(Math.abs(del-1)<EPS)break;} return h;}
+function ibeta(x,a,b){ if(x<=0)return 0;if(x>=1)return 1; let bt=Math.exp(logGamma(a+b)-logGamma(a)-logGamma(b)+a*Math.log(x)+b*Math.log(1-x)); if(x<(a+1)/(a+b+2)) return bt*betacf(x,a,b)/a; else return 1-bt*betacf(1-x,b,a)/b;}
+function tCDF(t,df){ let x=df/(df+t*t); let ib=ibeta(x,df/2,0.5); return t>=0?1-0.5*ib:0.5*ib;}
+function fCDF(f,df1,df2){ return ibeta((df1*f)/(df1*f+df2), df1/2, df2/2);}
+function gammaP(a,x){ if(x<0||a<=0)return NaN; if(x===0)return 0; if(x<a+1){let ap=a,sum=1/a,del=sum; for(let n=1;n<=100;n++){ap++;del*=x/ap;sum+=del;if(Math.abs(del)<Math.abs(sum)*3e-7)break;} return sum*Math.exp(-x+a*Math.log(x)-logGamma(a));} else {let b=x+1-a,c=1/1e-30,d=1/b,h=d; for(let i=1;i<=100;i++){let an=-i*(i-a);b+=2;d=an*d+b;if(Math.abs(d)<1e-30)d=1e-30;c=b+an/c;if(Math.abs(c)<1e-30)c=1e-30;d=1/d;let del=d*c;h*=del;if(Math.abs(del-1)<3e-7)break;} return 1-Math.exp(-x+a*Math.log(x)-logGamma(a))*h;}}
+function chiCDF(x,df){return gammaP(df/2,x/2);}
+
+// analyses
+function runDesc(){
+  let out="【描述統計 / 平均數】\n\n變項\tN\t平均數\t標準差\t最小值\t最大值\n";
+  numCols().forEach(h=>{let v=values(h); out+=`${h}\t${v.length}\t${fmt(mean(v))}\t${fmt(sd(v))}\t${fmt(Math.min(...v))}\t${fmt(Math.max(...v))}\n`;});
+  setOut(out);
+}
+function runPearson(){
+  const x=$("pearsonX").value,y=$("pearsonY").value,[a,b]=validPairs(x,y),n=a.length;
+  const r=pearsonRaw(a,b), t=r*Math.sqrt((n-2)/(1-r*r)), p=2*(1-tCDF(Math.abs(t),n-2));
+  setOut(`【Pearson 相關分析】\n\nX：${x}\nY：${y}\nN=${n}\nr=${fmt(r)}\nR²=${fmt(r*r)}\np=${fmt(p,4)}\n\n解讀：${p<.05?"達顯著相關":"未達顯著相關"}。${r>0?"正相關。":r<0?"負相關。":"無線性相關。"}`);
+}
+function runSpearman(){
+  const x=$("spearmanX").value,y=$("spearmanY").value;
+  const data=[]; rows.forEach(r=>{let xv=r[x],yv=r[y]; if(String(xv).trim()!=""&&String(yv).trim()!="") data.push([xv,yv]);});
+  const ax=data.map(d=>isNaN(toNum(d[0]))?String(d[0]):toNum(d[0])), by=data.map(d=>isNaN(toNum(d[1]))?String(d[1]):toNum(d[1]));
+  const rx=ranks(ax), ry=ranks(by), n=rx.length, rho=pearsonRaw(rx,ry), t=rho*Math.sqrt((n-2)/(1-rho*rho)), p=2*(1-tCDF(Math.abs(t),n-2));
+  setOut(`【Spearman 等級相關】\n\nX：${x}\nY：${y}\nN=${n}\nrho=${fmt(rho)}\np=${fmt(p,4)}\n\n解讀：${p<.05?"達顯著等級相關":"未達顯著等級相關"}。`);
+}
+function runTTest(){
+  const g=$("ttestG").value,y=$("ttestY").value,u=unique(g);
+  if(u.length!==2){setOut(`t檢定需要剛好兩組，目前 ${g} 有 ${u.length} 組。`);return;}
+  const a=rows.filter(r=>String(r[g]).trim()===u[0]).map(r=>toNum(r[y])).filter(v=>!isNaN(v));
+  const b=rows.filter(r=>String(r[g]).trim()===u[1]).map(r=>toNum(r[y])).filter(v=>!isNaN(v));
+  const va=variance(a),vb=variance(b), se=Math.sqrt(va/a.length+vb/b.length), t=(mean(a)-mean(b))/se;
+  const df=(va/a.length+vb/b.length)**2/((va/a.length)**2/(a.length-1)+(vb/b.length)**2/(b.length-1));
+  const p=2*(1-tCDF(Math.abs(t),df));
+  setOut(`【獨立樣本 t 檢定】\n\n分組：${g}\n分數：${y}\n\n${u[0]}：N=${a.length}, 平均=${fmt(mean(a))}, SD=${fmt(sd(a))}\n${u[1]}：N=${b.length}, 平均=${fmt(mean(b))}, SD=${fmt(sd(b))}\n\nt=${fmt(t)}\ndf=${fmt(df)}\np=${fmt(p,4)}\n\n解讀：${p<.05?"兩組平均數達顯著差異":"兩組平均數未達顯著差異"}。`);
+}
+function anovaCalc(groups){
+  const all=groups.flat(), grand=mean(all), k=groups.length, n=all.length;
+  const ssb=groups.reduce((s,a)=>s+a.length*(mean(a)-grand)**2,0);
+  const ssw=groups.reduce((s,a)=>s+a.reduce((q,v)=>q+(v-mean(a))**2,0),0);
+  const dfb=k-1,dfw=n-k,F=(ssb/dfb)/(ssw/dfw),p=1-fCDF(F,dfb,dfw);
+  return {F,p,dfb,dfw,ssb,ssw};
+}
+function runANOVA(){
+  const g=$("anovaG").value,y=$("anovaY").value,u=unique(g);
+  const groups=u.map(l=>rows.filter(r=>String(r[g]).trim()===l).map(r=>toNum(r[y])).filter(v=>!isNaN(v))).filter(a=>a.length>=2);
+  if(groups.length<2){setOut("ANOVA 至少需要兩組。");return;}
+  const labels=u.filter((l,i)=>groups[i]&&groups[i].length>=2), res=anovaCalc(groups);
+  let out=`【單因子 ANOVA】\n\n分組：${g}\n依變項：${y}\n\n各組描述：\n`;
+  groups.forEach((a,i)=>out+=`${labels[i]}：N=${a.length}, 平均=${fmt(mean(a))}, SD=${fmt(sd(a))}\n`);
+  out+=`\nF(${res.dfb}, ${res.dfw})=${fmt(res.F)}\np=${fmt(res.p,4)}\n\n解讀：${res.p<.05?"至少有一組平均數達顯著差異":"各組平均數未達顯著差異"}。`;
+  setOut(out);
+}
+function runReg(){
+  const x=$("regX").value,y=$("regY").value,[a,b]=validPairs(x,y),n=a.length,r=pearsonRaw(a,b);
+  const slope=r*sd(b)/sd(a),inter=mean(b)-slope*mean(a),t=r*Math.sqrt((n-2)/(1-r*r)),p=2*(1-tCDF(Math.abs(t),n-2));
+  setOut(`【簡單線性迴歸】\n\nX：${x}\nY：${y}\nN=${n}\n\n截距 a=${fmt(inter)}\n斜率 b=${fmt(slope)}\nR²=${fmt(r*r)}\np=${fmt(p,4)}\n\n迴歸式：\n${y} = ${fmt(inter)} + ${fmt(slope)} × ${x}\n\n解讀：${p<.05?"X 可以顯著預測 Y":"X 無法顯著預測 Y"}。`);
+}
+function getChecked(box){return [...$(box).querySelectorAll("input:checked")].map(x=>x.value);}
+function matrixRows(items){return rows.map(r=>items.map(h=>toNum(r[h]))).filter(a=>a.every(v=>!isNaN(v)));}
+function runAlpha(){
+  const items=getChecked("alphaItems"); if(items.length<2){setOut("至少要勾選兩題。");return;}
+  const m=matrixRows(items), k=items.length, cols=items.map((_,j)=>m.map(r=>r[j])), itemVars=cols.map(variance), totals=m.map(r=>r.reduce((s,v)=>s+v,0));
+  const alpha=(k/(k-1))*(1-itemVars.reduce((s,v)=>s+v,0)/variance(totals));
+  setOut(`【Cronbach α 信度分析】\n\n題目數 k=${k}\n有效樣本 N=${m.length}\nCronbach α=${fmt(alpha)}\n\n解讀：${alpha>=.9?"信度極佳":alpha>=.8?"信度良好":alpha>=.7?"信度可接受":alpha>=.6?"信度勉強可接受":"信度偏低"}。`);
+}
+function corrMatrix(items){
+  const m=matrixRows(items), p=items.length, C=Array.from({length:p},()=>Array(p).fill(0));
+  for(let i=0;i<p;i++) for(let j=0;j<p;j++) C[i][j]=pearsonRaw(m.map(r=>r[i]),m.map(r=>r[j]));
+  return {C,m};
+}
+function invMatrix(A){
+  const n=A.length, M=A.map((r,i)=>[...r,...Array.from({length:n},(_,j)=>i===j?1:0)]);
+  for(let i=0;i<n;i++){let max=i; for(let r=i+1;r<n;r++) if(Math.abs(M[r][i])>Math.abs(M[max][i])) max=r; [M[i],M[max]]=[M[max],M[i]]; let piv=M[i][i]; if(Math.abs(piv)<1e-12) return null; for(let c=0;c<2*n;c++) M[i][c]/=piv; for(let r=0;r<n;r++) if(r!==i){let f=M[r][i]; for(let c=0;c<2*n;c++) M[r][c]-=f*M[i][c];}}
+  return M.map(r=>r.slice(n));
+}
+function detMatrix(A){
+  const n=A.length, M=A.map(r=>r.slice()); let det=1;
+  for(let i=0;i<n;i++){let p=i; for(let r=i;r<n;r++) if(Math.abs(M[r][i])>Math.abs(M[p][i])) p=r; if(Math.abs(M[p][i])<1e-12)return 0; if(p!==i){[M[i],M[p]]=[M[p],M[i]];det*=-1;} det*=M[i][i]; for(let r=i+1;r<n;r++){let f=M[r][i]/M[i][i]; for(let c=i;c<n;c++) M[r][c]-=f*M[i][c];}} return det;
+}
+function jacobi(A){
+  const n=A.length,D=A.map(r=>r.slice()),V=Array.from({length:n},(_,i)=>Array.from({length:n},(_,j)=>i===j?1:0));
+  for(let it=0;it<200;it++){let p=0,q=1,max=0; for(let i=0;i<n;i++)for(let j=i+1;j<n;j++)if(Math.abs(D[i][j])>max){max=Math.abs(D[i][j]);p=i;q=j;} if(max<1e-10)break; let th=.5*Math.atan2(2*D[p][q],D[q][q]-D[p][p]),c=Math.cos(th),s=Math.sin(th); for(let i=0;i<n;i++){let dip=D[i][p],diq=D[i][q];D[i][p]=c*dip-s*diq;D[i][q]=s*dip+c*diq;} for(let j=0;j<n;j++){let dpj=D[p][j],dqj=D[q][j];D[p][j]=c*dpj-s*dqj;D[q][j]=s*dpj+c*dqj;} for(let i=0;i<n;i++){let vip=V[i][p],viq=V[i][q];V[i][p]=c*vip-s*viq;V[i][q]=s*vip+c*viq;}}
+  let vals=D.map((r,i)=>r[i]), order=vals.map((v,i)=>[v,i]).sort((a,b)=>b[0]-a[0]);
+  return {values:order.map(x=>x[0]), vectors:order.map(x=>V.map(r=>r[x[1]]))};
+}
+function runFactor(){
+  const items=getChecked("factorItems"); if(items.length<3){setOut("因素分析至少建議三題以上。");return;}
+  const {C,m}=corrMatrix(items), n=m.length, p=items.length, inv=invMatrix(C);
+  let kmo=NaN;
+  if(inv){let r2=0,pr2=0; for(let i=0;i<p;i++)for(let j=0;j<p;j++)if(i!==j){r2+=C[i][j]**2; let pr=-inv[i][j]/Math.sqrt(inv[i][i]*inv[j][j]); pr2+=pr**2;} kmo=r2/(r2+pr2);}
+  const det=detMatrix(C); let bart="無法計算";
+  if(det>0){let chi=-(n-1-(2*p+5)/6)*Math.log(det), df=p*(p-1)/2, bp=1-chiCDF(chi,df); bart=`χ²=${fmt(chi)}, df=${df}, p=${fmt(bp,4)}`;}
+  const eig=jacobi(C), vals=eig.values, factors=Math.max(1, vals.filter(v=>v>1).length), total=vals.reduce((s,v)=>s+v,0);
+  let out=`【因素分析 / PCA】\n\n有效樣本 N=${n}\n題目數=${p}\n\nKMO=${fmt(kmo)}\nKMO判斷：${kmo>=.6?"適合因素分析":"低於 .60，較不適合因素分析"}\n\nBartlett球形檢定：\n${bart}\n\n特徵值：\n`;
+  vals.forEach((v,i)=>out+=`因素${i+1}：Eigenvalue=${fmt(v)}, 解釋變異=${fmt(v/total*100,2)}%\n`);
+  out+=`\n依 Eigenvalue > 1，建議萃取因素數：${factors}\n\n因素負荷量（未旋轉PCA簡化版）：\n`;
+  items.forEach((item,i)=>{out+=item+"\t"; for(let f=0;f<Math.min(factors,8);f++){let loading=eig.vectors[f][i]*Math.sqrt(Math.max(vals[f],0)); out+=`F${f+1}:${fmt(loading)}\t`;} out+="\n";});
+  setOut(out);
+}
+
+// ---------- ANCOVA helpers ----------
+function transpose(M){ return M[0].map((_,i)=>M.map(r=>r[i])); }
+function matMul(A,B){
+  const Bt=transpose(B);
+  return A.map(r=>Bt.map(c=>r.reduce((s,v,i)=>s+v*c[i],0)));
+}
+function matVec(A,v){ return A.map(r=>r.reduce((s,x,i)=>s+x*v[i],0)); }
+function dot(a,b){ return a.reduce((s,v,i)=>s+v*b[i],0); }
+function lmFit(X,y){
+  const Xt=transpose(X), XtX=matMul(Xt,X), inv=invMatrix(XtX);
+  if(!inv) return null;
+  const Xty=matVec(Xt,y);
+  const beta=matVec(inv,Xty);
+  const fitted=X.map(r=>dot(r,beta));
+  const resid=y.map((v,i)=>v-fitted[i]);
+  const SSE=resid.reduce((s,e)=>s+e*e,0);
+  const df=y.length-X[0].length;
+  return {beta,fitted,resid,SSE,df,p:X[0].length,n:y.length};
+}
+function buildDesign(data, groupCol, covCol, includeInteraction=false){
+  const levels=[...new Set(data.map(d=>d.g))].sort();
+  const X=[], y=[];
+  data.forEach(d=>{
+    let row=[1];
+    // dummy coding: omit first group
+    for(let i=1;i<levels.length;i++) row.push(d.g===levels[i]?1:0);
+    row.push(d.x);
+    if(includeInteraction){
+      for(let i=1;i<levels.length;i++) row.push((d.g===levels[i]?1:0)*d.x);
+    }
+    X.push(row); y.push(d.y);
+  });
+  return {X,y,levels};
+}
+function nestedF(full, reduced){
+  const df1=reduced.df-full.df;
+  const df2=full.df;
+  const F=((reduced.SSE-full.SSE)/df1)/(full.SSE/df2);
+  const p=1-fCDF(F,df1,df2);
+  return {F,p,df1,df2};
+}
+function adjustedMeans(data, levels){
+  const covMean=mean(data.map(d=>d.x));
+  const design=buildDesign(data,null,null,false);
+  const fit=lmFit(design.X, design.y);
+  if(!fit) return [];
+  const base=levels[0];
+  return levels.map(level=>{
+    let row=[1];
+    for(let i=1;i<levels.length;i++) row.push(level===levels[i]?1:0);
+    row.push(covMean);
+    return {level, adj: dot(row, fit.beta)};
+  });
+}
+function tukeyApprox(groups){
+  // This is a practical pairwise Welch/t approximation, labeled as approximate.
+  const out=[];
+  const labels=Object.keys(groups);
+  for(let i=0;i<labels.length;i++){
+    for(let j=i+1;j<labels.length;j++){
+      const a=groups[labels[i]], b=groups[labels[j]];
+      const va=variance(a), vb=variance(b);
+      const se=Math.sqrt(va/a.length+vb/b.length);
+      const t=Math.abs(mean(a)-mean(b))/se;
+      const df=(va/a.length+vb/b.length)**2/((va/a.length)**2/(a.length-1)+(vb/b.length)**2/(b.length-1));
+      const p=2*(1-tCDF(t,df));
+      out.push({pair:`${labels[i]} vs ${labels[j]}`, diff:mean(a)-mean(b), p});
+    }
+  }
+  return out;
+}
+function runANCOVA(){
+  const g=$("ancovaG").value, cov=$("ancovaCov").value, yv=$("ancovaY").value;
+  const data=rows.map(r=>({g:String(r[g]).trim(), x:toNum(r[cov]), y:toNum(r[yv])}))
+                 .filter(d=>d.g!==""&&!isNaN(d.x)&&!isNaN(d.y));
+  const levels=[...new Set(data.map(d=>d.g))].sort();
+  if(levels.length<2){ setOut("ANCOVA 至少需要兩組。"); return; }
+  if(data.length <= levels.length+2){ setOut("資料筆數不足，無法做 ANCOVA。"); return; }
+
+  // Homogeneity of regression slopes:
+  const fullInt=lmFit(buildDesign(data,g,cov,true).X, buildDesign(data,g,cov,true).y);
+  const noInt=lmFit(buildDesign(data,g,cov,false).X, buildDesign(data,g,cov,false).y);
+  if(!fullInt || !noInt){ setOut("ANCOVA 計算失敗：設計矩陣無法反矩陣，可能是組別或資料共線。"); return; }
+  const inter=nestedF(fullInt,noInt);
+
+  // ANCOVA group effect after covariate, without interaction:
+  const designFull=buildDesign(data,g,cov,false);
+  const full=lmFit(designFull.X,designFull.y);
+  // reduced: intercept + covariate only
+  const Xred=data.map(d=>[1,d.x]), y=data.map(d=>d.y);
+  const red=lmFit(Xred,y);
+  const groupEffect=nestedF(full,red);
+
+  // covariate effect: intercept + group only vs intercept + group + covariate
+  const XgroupOnly=data.map(d=>{
+    let row=[1];
+    for(let i=1;i<levels.length;i++) row.push(d.g===levels[i]?1:0);
+    return row;
+  });
+  const groupOnly=lmFit(XgroupOnly,y);
+  const covEffect=nestedF(full,groupOnly);
+
+  // Levene on DV by group
+  const groupVals={};
+  levels.forEach(l=>groupVals[l]=data.filter(d=>d.g===l).map(d=>d.y));
+  const lev=leveneTest(Object.values(groupVals));
+
+  const adjs=adjustedMeans(data,levels);
+  const post=tukeyApprox(groupVals);
+
+  let out=`【ANCOVA 共變數分析】\n\n固定因子/組別：${g}\n共變項：${cov}\n依變項：${yv}\n有效樣本 N=${data.length}\n組別數=${levels.length}\n\n`;
+
+  out+=`一、描述統計\n`;
+  levels.forEach(l=>{
+    const arr=groupVals[l], covs=data.filter(d=>d.g===l).map(d=>d.x);
+    out+=`${l}：N=${arr.length}, ${yv}平均=${fmt(mean(arr))}, SD=${fmt(sd(arr))}, ${cov}平均=${fmt(mean(covs))}\n`;
+  });
+
+  out+=`\n二、Levene 變異數同質性檢定（依變項）\nF(${lev.df1}, ${lev.df2})=${fmt(lev.F)}, p=${fmt(lev.p,4)}\n`;
+  out+=`${lev.p>.05?"p > .05，符合變異數同質性。":"p < .05，變異數同質性可能不符合。"}\n`;
+
+  out+=`\n三、組內迴歸係數同質性檢定\n檢查：${g} × ${cov} 交互作用\nF(${inter.df1}, ${inter.df2})=${fmt(inter.F)}, p=${fmt(inter.p,4)}\n`;
+  out+=`${inter.p>.05?"p > .05，交互作用未達顯著，通過組內迴歸係數同質性，可繼續做 ANCOVA。":"p < .05，交互作用達顯著，不符合組內迴歸係數同質性，不建議直接解讀 ANCOVA。"}\n`;
+
+  out+=`\n四、ANCOVA 結果（控制 ${cov} 後）\n`;
+  out+=`共變項效果 ${cov}：F(${covEffect.df1}, ${covEffect.df2})=${fmt(covEffect.F)}, p=${fmt(covEffect.p,4)}\n`;
+  out+=`組別效果 ${g}：F(${groupEffect.df1}, ${groupEffect.df2})=${fmt(groupEffect.F)}, p=${fmt(groupEffect.p,4)}\n`;
+  out+=`${groupEffect.p<.05?"控制共變項後，不同組別在依變項上達顯著差異。":"控制共變項後，不同組別在依變項上未達顯著差異。"}\n`;
+
+  out+=`\n五、校正後平均數（Adjusted Means，控制 ${cov} 於整體平均）\n`;
+  adjs.forEach(m=>out+=`${m.level}：${fmt(m.adj)}\n`);
+
+  out+=`\n六、事後比較（近似 pairwise t；正式報告可用 SPSS/JASP 的 Tukey/Scheffé 核對）\n`;
+  post.forEach(p=>out+=`${p.pair}：平均差=${fmt(p.diff)}, p=${fmt(p.p,4)} ${p.p<.05?"*":""}\n`);
+
+  out+=`\n七、可直接貼報告的文字\n`;
+  out+=`本研究先進行組內迴歸係數同質性檢定，結果顯示 ${g} 與 ${cov} 的交互作用${inter.p>.05?"未達顯著":"達顯著"}（F(${inter.df1}, ${inter.df2})=${fmt(inter.F)}, p=${fmt(inter.p,4)}），`;
+  out+=`${inter.p>.05?"符合組內迴歸係數同質性假設，故進一步進行共變數分析。":"表示不符合組內迴歸係數同質性假設，故不宜直接解讀一般 ANCOVA 結果。"}\n`;
+  if(inter.p>.05){
+    out+=`在控制 ${cov} 後，${g} 對 ${yv} 的影響${groupEffect.p<.05?"達顯著":"未達顯著"}（F(${groupEffect.df1}, ${groupEffect.df2})=${fmt(groupEffect.F)}, p=${fmt(groupEffect.p,4)}）。`;
+  }
+
+  setOut(out);
+}
+function leveneTest(groups){
+  const zGroups=groups.map(arr=>{
+    const med=arr.slice().sort((a,b)=>a-b)[Math.floor(arr.length/2)];
+    return arr.map(v=>Math.abs(v-med));
+  });
+  const res=anovaCalc(zGroups);
+  return {F:res.F,p:res.p,df1:res.dfb,df2:res.dfw};
+}
+
+function runTwoWay(){
+  const A=$("twoA").value,B=$("twoB").value,Y=$("twoY").value, levelsA=unique(A), levelsB=unique(B);
+  const data=rows.map(r=>({a:String(r[A]).trim(),b:String(r[B]).trim(),y:toNum(r[Y])})).filter(r=>r.a&&r.b&&!isNaN(r.y));
+  const grand=mean(data.map(r=>r.y)), n=data.length;
+  let ssA=0,ssB=0,ssAB=0,ssE=0;
+  levelsA.forEach(a=>{let arr=data.filter(r=>r.a===a).map(r=>r.y); if(arr.length)ssA+=arr.length*(mean(arr)-grand)**2;});
+  levelsB.forEach(b=>{let arr=data.filter(r=>r.b===b).map(r=>r.y); if(arr.length)ssB+=arr.length*(mean(arr)-grand)**2;});
+  levelsA.forEach(a=>levelsB.forEach(b=>{let cell=data.filter(r=>r.a===a&&r.b===b).map(r=>r.y); if(cell.length){let ma=mean(data.filter(r=>r.a===a).map(r=>r.y)), mb=mean(data.filter(r=>r.b===b).map(r=>r.y)), mc=mean(cell); ssAB+=cell.length*(mc-ma-mb+grand)**2; ssE+=cell.reduce((s,v)=>s+(v-mc)**2,0);}}));
+  let dfA=levelsA.length-1,dfB=levelsB.length-1,dfAB=dfA*dfB,dfE=n-levelsA.length*levelsB.length;
+  let FA=(ssA/dfA)/(ssE/dfE), FB=(ssB/dfB)/(ssE/dfE), FAB=(ssAB/dfAB)/(ssE/dfE);
+  let pA=1-fCDF(FA,dfA,dfE), pB=1-fCDF(FB,dfB,dfE), pAB=1-fCDF(FAB,dfAB,dfE);
+  setOut(`【二因子 ANOVA 簡化版】\n\n因子A：${A}\n因子B：${B}\n依變項：${Y}\nN=${n}\n\n來源\tF\tp\n${A} 主效果\t${fmt(FA)}\t${fmt(pA,4)}\n${B} 主效果\t${fmt(FB)}\t${fmt(pB,4)}\n${A}×${B} 交互作用\t${fmt(FAB)}\t${fmt(pAB,4)}\n\n解讀：先看交互作用。\n${pAB<.05?"交互作用顯著，優先解讀交互作用，不急著看主效果。":"交互作用不顯著，可以回頭看兩個主效果。"}`);
+}
+
+function pairedT(a,b){
+  const d=a.map((v,i)=>v-b[i]);
+  const n=d.length;
+  const md=mean(d);
+  const sdd=sd(d);
+  const t=md/(sdd/Math.sqrt(n));
+  const p=2*(1-tCDF(Math.abs(t),n-1));
+  return {t,p,df:n-1,diff:md};
+}
+
+function covarianceMatrix(M){
+  const n=M.length, p=M[0].length;
+  const means=Array.from({length:p},(_,j)=>mean(M.map(r=>r[j])));
+  const S=Array.from({length:p},()=>Array(p).fill(0));
+  for(let i=0;i<p;i++){
+    for(let j=0;j<p;j++){
+      let s=0;
+      for(let r=0;r<n;r++) s+=(M[r][i]-means[i])*(M[r][j]-means[j]);
+      S[i][j]=s/(n-1);
+    }
+  }
+  return S;
+}
+
+function mauchlyTest(M){
+  const n=M.length, k=M[0].length;
+  if(k<3) return null;
+  // difference matrix: each later condition minus first condition
+  const D=M.map(row=>row.slice(1).map(v=>v-row[0]));
+  const S=covarianceMatrix(D);
+  const m=k-1;
+  const det=detMatrix(S);
+  const tr=S.reduce((s,row,i)=>s+row[i],0);
+  if(det<=0 || tr<=0) return null;
+  const W=det/Math.pow(tr/m,m);
+  const df=(k*(k-1)/2)-1;
+  // Practical approximation for teaching-use Mauchly test.
+  const c=(2*k*k+k+2)/(6*(k-1)*(n-1));
+  const chi=-(n-1)*(1-c)*Math.log(W);
+  const p=1-chiCDF(chi,df);
+  return {W,chi,df,p};
+}
+
+function runRMANOVA(){
+  const items=getChecked("rmItems");
+  if(items.length<3){
+    setOut("重複量數 ANOVA 至少要勾選三個重複測量欄位。");
+    return;
+  }
+
+  const M=matrixRows(items);
+  const n=M.length, k=items.length;
+  if(n<2){
+    setOut("有效樣本太少，無法分析。");
+    return;
+  }
+
+  const all=M.flat();
+  const grand=mean(all);
+  const condMeans=items.map((_,j)=>mean(M.map(r=>r[j])));
+  const subjMeans=M.map(r=>mean(r));
+
+  let ssTotal=0, ssCond=0, ssSubj=0, ssError=0;
+  M.forEach(r=>r.forEach(v=>ssTotal+=(v-grand)**2));
+  condMeans.forEach(m=>ssCond+=n*(m-grand)**2);
+  subjMeans.forEach(m=>ssSubj+=k*(m-grand)**2);
+  ssError=ssTotal-ssCond-ssSubj;
+
+  const dfCond=k-1;
+  const dfError=(k-1)*(n-1);
+  const msCond=ssCond/dfCond;
+  const msError=ssError/dfError;
+  const F=msCond/msError;
+  const p=1-fCDF(F,dfCond,dfError);
+  const eta=ssCond/(ssCond+ssError);
+
+  const mau=mauchlyTest(M);
+
+  let out=`【重複量數 ANOVA（單因子相依樣本）】\n\n`;
+  out+=`重複測量欄位：${items.join("、")}\n有效樣本 N=${n}\n測量次數/條件數=${k}\n\n`;
+
+  out+=`一、描述統計\n`;
+  items.forEach((it,j)=>{
+    const arr=M.map(r=>r[j]);
+    out+=`${it}：平均=${fmt(mean(arr))}, SD=${fmt(sd(arr))}\n`;
+  });
+
+  out+=`\n二、球形檢定（Mauchly's Test，教學近似版）\n`;
+  if(mau){
+    out+=`W=${fmt(mau.W)}, χ²(${mau.df})=${fmt(mau.chi)}, p=${fmt(mau.p,4)}\n`;
+    out+=`${mau.p>.05?"p > .05，符合球形假設。":"p < .05，不符合球形假設，正式報告建議看 Greenhouse-Geisser 校正。"}\n`;
+  }else{
+    out+=`無法計算球形檢定，可能是資料共線或變異數矩陣不可逆。\n`;
+  }
+
+  out+=`\n三、重複量數 ANOVA 結果\n`;
+  out+=`F(${dfCond}, ${dfError})=${fmt(F)}, p=${fmt(p,4)}, partial η²=${fmt(eta)}\n`;
+  out+=`${p<.05?"不同條件/版本之間達顯著差異。":"不同條件/版本之間未達顯著差異。"}\n`;
+
+  out+=`\n四、Bonferroni 事後比較（配對 t 檢定近似）\n`;
+  const comps=k*(k-1)/2;
+  for(let i=0;i<k;i++){
+    for(let j=i+1;j<k;j++){
+      const a=M.map(r=>r[i]), b=M.map(r=>r[j]);
+      const res=pairedT(a,b);
+      const pBon=Math.min(res.p*comps,1);
+      out+=`${items[i]} vs ${items[j]}：平均差=${fmt(res.diff)}, t(${res.df})=${fmt(res.t)}, p_adj=${fmt(pBon,4)} ${pBon<.05?"*":""}\n`;
+    }
+  }
+
+  out+=`\n五、可直接貼報告的文字\n`;
+  if(mau){
+    out+=`首先進行球形檢定，結果顯示${mau.p>.05?"符合":"不符合"}球形假設（W=${fmt(mau.W)}, p=${fmt(mau.p,4)}）。`;
+  }
+  out+=`重複量數 ANOVA 結果顯示，不同條件/版本之間的平均數${p<.05?"達顯著差異":"未達顯著差異"}（F(${dfCond}, ${dfError})=${fmt(F)}, p=${fmt(p,4)}）。`;
+
+  setOut(out);
+}
+
+
+function autoGuide(){
+  setOut(`【統計方法判斷指南】\n\n問關係：\n連續 × 連續 → Pearson相關\n次序/排名/等第 → Spearman相關\n\n問差異：\n兩組平均數 → 獨立樣本t檢定\n三組以上、不同人 → 單因子ANOVA\n同一批人三次以上 → 重複量數ANOVA\n兩個因素 → 二因子ANOVA\n\n問預測：\nX能不能預測Y → 迴歸分析\n\n問問卷：\n分幾類 / 建構效度 → 因素分析\n穩不穩 / 內部一致性 → Cronbach α\n\n常考：\nKMO > .60\nBartlett p < .05\nCronbach α > .70\n交互作用顯著 → 不優先討論主效果`);
+}
+function loadPasted(){ const t=$("pasteArea").value.trim(); if(!t){alert("請先貼資料");return;} parseCSV(t);}
+function loadExample(){ const csv=`gender,group,age,score,pretest,posttest,q1,q2,q3,q4,q5,q6
+男,A,20,82,70,85,4,5,4,3,2,2
+女,A,21,80,68,83,5,5,4,4,2,1
+男,B,22,72,65,76,3,4,3,2,4,5
+女,B,20,70,60,74,3,3,2,2,5,5
+男,C,23,88,75,90,5,4,5,4,1,2
+女,C,22,85,72,87,4,4,5,3,2,2
+男,A,21,81,69,84,4,5,4,3,2,2
+女,B,24,73,62,75,3,3,3,2,4,4
+男,C,22,90,76,92,5,5,5,4,1,1
+女,A,20,79,67,82,4,4,4,3,3,3`; $("pasteArea").value=csv; parseCSV(csv);}
+function clearAll(){rows=[];headers=[];$("pasteArea").value="";$("preview").innerHTML="";$("info").textContent="尚未載入資料";setOut("請先載入資料。");}
+function copyResult(){navigator.clipboard.writeText(resultText||$("output").textContent); alert("已複製");}
+function downloadResult(){const blob=new Blob([resultText||$("output").textContent],{type:"text/plain;charset=utf-8"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download="統計分析結果.txt"; a.click();}
+
+
+
+</script>
+<img src="IMG_3865.PNG" class="left-photo">
+
+<img src="IMG_3866.PNG" class="right-photo">
+</body>
+</html>
