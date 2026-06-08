@@ -24,6 +24,10 @@
   color:white;
   padding:10px;
   font-weight:bold;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
 #chat-messages{
@@ -43,6 +47,24 @@
 
 #send-btn{
   width:80px;
+}
+  #chat-toggle{
+  width:30px;
+  height:30px;
+  padding:0;
+  border-radius:50%;
+  background:white;
+  color:#315b96;
+  font-weight:bold;
+}
+
+#chat-widget.minimized{
+  height:50px;
+}
+
+#chat-widget.minimized #chat-messages,
+#chat-widget.minimized #chat-input-area{
+  display:none;
 }
 *{box-sizing:border-box}
 body{margin:0;font-family:"Microsoft JhengHei",Arial,sans-serif;background:#f3f6fb;color:#1f2937}
@@ -532,6 +554,23 @@ function adjustedMeans(data, levels){
     return {level, adj: dot(row, fit.beta)};
   });
 }
+  function toggleChat(){
+
+  const chat =
+  document.getElementById("chat-widget");
+
+  const btn =
+  document.getElementById("chat-toggle");
+
+  chat.classList.toggle("minimized");
+
+  if(chat.classList.contains("minimized")){
+    btn.textContent="+";
+  }else{
+    btn.textContent="－";
+  }
+
+}
 function tukeyApprox(groups){
   // This is a practical pairwise Welch/t approximation, labeled as approximate.
   const out=[];
@@ -881,9 +920,13 @@ onChildAdded(chatRef,(snap)=>{
 <div id="chat-widget">
 
   <div id="chat-header">
-    📊 統計聊天室
-  </div>
+  <span>📊 統計聊天室</span>
 
+  <button id="chat-toggle"
+          onclick="toggleChat()">
+    －
+  </button>
+</div>
   <div id="chat-messages"></div>
 
   <div id="chat-input-area">
